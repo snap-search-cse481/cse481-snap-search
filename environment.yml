@@ -9,3 +9,5 @@ dependencies:
   - opencv
   - pillow
   - selenium
+  - flask
+  - ollama-python
