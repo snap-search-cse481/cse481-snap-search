@@ -10,4 +10,6 @@ dependencies:
   - pillow
   - selenium
   - flask
+  - flask-cors
+  - tqdm
   - ollama-python
