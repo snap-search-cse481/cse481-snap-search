@@ -1,18 +1,17 @@
 import time
 import requests
 import urllib.request
+import os
 from tqdm import tqdm
 
 TESTING_MODE = True
 APITOKEN = '' # Your API Token
 
-# Download the photo of the person you want to find
-# urllib.request.urlretrieve('https://www.indiewire.com/wp-content/uploads/2018/01/daniel-craig.jpg?w=300', "daniel.jpg")
-image_file = 'daniel.jpg' 
-
-def search_by_face(image_file):
+def search_by_face(image_file, debug=False):
     if TESTING_MODE:
         print('****** TESTING MODE search, results are inacurate, and queue wait is long, but credits are NOT deducted ******')
+
+    assert APITOKEN, 'You must set your API token in the APITOKEN variable'
 
     site='https://facecheck.id'
     headers = {'accept': 'application/json', 'Authorization': APITOKEN}
@@ -26,6 +25,8 @@ def search_by_face(image_file):
     print(response['message'] + ' id_search='+id_search)
     json_data = {'id_search': id_search, 'with_progress': True, 'status_only': False, 'demo': TESTING_MODE}
 
+
+    # Create a progress bar to indicate position in queue & progress
     posn = -1
     max_posn = -1
 
@@ -42,9 +43,12 @@ def search_by_face(image_file):
                 if posn > 0:
                     pbar.set_description(f'Position in queue: {0}')
                     pbar.update(1)
+                # Debug prints
+                if debug:
+                    print_result(response['output']['items'])
                 return None, response['output']['items']
             
-            
+            # Handle progress response & update progress bar accordingly
             if response["message"].startswith('Waiting in queue. '):
                 try:
                     new_posn = int(response["message"][len('Waiting in queue. '):-8])
@@ -71,6 +75,18 @@ def search_by_face(image_file):
             
             time.sleep(1)
 
+def print_result(urls_images):
+    print(f'DEBUG: Found {len(urls_images)} images')
+    for url_image in urls_images:
+        print(f"  score: {url_image['score']} group: {url_image['group']} url: {url_image['url']}")
 
-# Search the Internet by face
-error, urls_images = search_by_face(image_file)
+
+# Main method for demonstration & debug purpose
+if __name__ == '__main__':
+    # Test photo
+    image_file = 'photo.jpg'
+    assert os.path.exists(image_file), f'File {image_file} does not exist'
+
+    # Run lookup on test photo
+    search_by_face(image_file, debug=True)
+    
