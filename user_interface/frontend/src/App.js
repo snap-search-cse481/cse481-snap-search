@@ -75,12 +75,22 @@ class CustomerApp extends Component {
     this.dragAreaRef.current.classList.remove("active");
   };
 
+  noCapture = () => {
+    if (this.or.current.style.display !== 'none') {
+      this.or.current.style.display = 'none';
+    }
+    if (this.picButton.current.style.display !== 'none') {
+      this.picButton.current.style.display = 'none';
+    }
+  };
+
   handleDrop = (event) => {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
     if (file) {
       this.setState({ file }, this.displayFile);
     }
+    this.noCapture();
   };
 
   displayFile = () => {
@@ -96,6 +106,7 @@ class CustomerApp extends Component {
         this.submitButton.current.style.display = 'inline-block';
       };
       fileReader.readAsDataURL(file);
+      this.noCapture();
     } else {
       alert('This file is not an image.');
       this.dragAreaRef.current.textContent = 'Drag & Drop';
@@ -104,8 +115,7 @@ class CustomerApp extends Component {
   };
 
   handleTakePic = () => {
-    this.or.current.style.display = 'none';
-    this.picButton.current.style.display = 'none';
+    this.noCapture();
     this.popupBg.current.classList.add('open');
     this.popup.current.classList.add('open');
 
@@ -165,8 +175,6 @@ handleCapture = () => {
       console.error("Canvas context is not available");
   }
 };
-
-
 
   handleSubmit = () => {
     const handleUpload = async () => {
