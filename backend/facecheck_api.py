@@ -43,10 +43,12 @@ def search_by_face(image_file, debug=False):
                 if posn > 0:
                     pbar.set_description(f'Position in queue: {0}')
                     pbar.update(1)
+                links_with_scores = [(img['score'], img['url']) for img in response['output']['items']]
+                links_with_scores.sort(reverse=True, key=lambda x: x[0])
                 # Debug prints
                 if debug:
                     print_result(response['output']['items'])
-                return None, response['output']['items']
+                return None, links_with_scores
             
             # Handle progress response & update progress bar accordingly
             if response["message"].startswith('Waiting in queue. '):
@@ -77,16 +79,18 @@ def search_by_face(image_file, debug=False):
 
 def print_result(urls_images):
     print(f'DEBUG: Found {len(urls_images)} images')
-    for url_image in urls_images:
-        print(f"  score: {url_image['score']} group: {url_image['group']} url: {url_image['url']}")
 
+    if urls_images:
+        links_with_scores = [(img['score'], img['url']) for img in urls_images]
+        links_with_scores.sort(reverse=True, key=lambda x: x[0])
+
+        print(links_with_scores)
 
 # Main method for demonstration & debug purpose
 if __name__ == '__main__':
     # Test photo
-    image_file = 'photo.jpg'
+    image_file = './photo.jpg'
     assert os.path.exists(image_file), f'File {image_file} does not exist'
 
     # Run lookup on test photo
     search_by_face(image_file, debug=True)
-    

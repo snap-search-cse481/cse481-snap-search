@@ -159,6 +159,13 @@ handleCapture = () => {
               this.setState({ file }, this.displayFile);
           });
 
+      // Stop the camera stream
+      if (this.video.current.srcObject) {
+          const tracks = this.video.current.srcObject.getTracks();
+          tracks.forEach(track => track.stop()); 
+          this.video.current.srcObject = null; 
+      }
+
       this.popupBg.current.classList.remove('open');
       this.popup.current.classList.remove('open');
   } else {
