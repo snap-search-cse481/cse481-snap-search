@@ -16,11 +16,44 @@ class CustomerApp extends Component {
     this.dragAreaRef = createRef();
     this.resultsContainerRef = createRef();
     this.submitButton = createRef();
+    this.picButton = createRef();
+    this.or = createRef();
+    this.popup = createRef();
+    this.popupBg = createRef();
+    this.capture = createRef();
+    this.video = createRef();
+    this.canvas = createRef();
   }
 
   componentDidMount() {
     console.log("Component Mounted");
-  }
+
+    (function(i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r;
+        i[r] = i[r] || function() {
+            (i[r].q = i[r].q || []).push(arguments);
+        };
+        i[r].l = 1 * new Date();
+        a = s.createElement(o);
+        m = s.getElementsByTagName(o)[0];
+        a.async = 1;
+        a.src = g;
+        m.parentNode.insertBefore(a, m);
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+
+    window.ga = window.ga || function() {
+        console.warn("Google Analytics is not available yet.");
+    };
+
+    if (typeof window.ga === "function") {
+        window.ga('create', 'UA-48530561-1', 'auto');
+        window.ga('send', 'pageview');
+    } else {
+        console.error("Google Analytics (ga) is not available.");
+    }
+}
+
+
 
   handleInputClick = () => {
     this.fileInputRef.current.click();
@@ -70,6 +103,71 @@ class CustomerApp extends Component {
     }
   };
 
+  handleTakePic = () => {
+    this.or.current.style.display = 'none';
+    this.picButton.current.style.display = 'none';
+    this.popupBg.current.classList.add('open');
+    this.popup.current.classList.add('open');
+
+    const constraints = {
+        audio: false,
+        video: true
+    };
+
+    const handleSuccess = (stream) => {
+        console.log("Camera stream received:", stream);
+        window.stream = stream;
+
+        if (this.video.current) {
+            this.video.current.srcObject = stream;
+            this.video.current.play();
+        } else {
+            console.error("Video element is not available yet.");
+        }
+    };
+
+    const handleError = (error) => {
+        console.error("Camera access error:", error.message);
+        alert("Error accessing camera: " + error.message);
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(handleSuccess)
+        .catch(handleError);
+};
+
+
+handleCapture = () => {
+  if (!this.video.current || !this.canvas.current) {
+      console.error("Video or Canvas reference is not available");
+      return;
+  }
+
+  this.canvas.current.width = this.video.current.videoWidth;
+  this.canvas.current.height = this.video.current.videoHeight;
+  const ctx = this.canvas.current.getContext('2d');
+
+  if (ctx) {
+      ctx.drawImage(this.video.current, 0, 0, this.canvas.current.width, this.canvas.current.height);
+      const imageData = this.canvas.current.toDataURL('image/png');
+
+      // Convert Base64 to File
+      fetch(imageData)
+          .then(res => res.blob())
+          .then(blob => {
+              const file = new File([blob], "captured_image.png", { type: "image/png" });
+              this.setState({ file }, this.displayFile);
+          });
+
+      this.popupBg.current.classList.remove('open');
+      this.popup.current.classList.remove('open');
+  } else {
+      console.error("Canvas context is not available");
+  }
+};
+
+
+
   handleSubmit = () => {
     const handleUpload = async () => {
 
@@ -85,8 +183,8 @@ class CustomerApp extends Component {
         } catch (error) {
             console.error('Error uploading image:', error);
             alert('Upload failed.');
-    }
-  }
+        }
+    };
 
     handleUpload();
     this.submitButton.current.style.display = 'none';
@@ -142,7 +240,8 @@ class CustomerApp extends Component {
               <input type="file" hidden ref={this.fileInputRef} onChange={this.handleFileChange}/>
               <span className="support">Supports: JPEG, JPG, PNG</span>
             </div>
-            <button class="button1" ref={this.submitButton} onClick={this.handleSubmit}>Submit Photo</button>
+            <span className="header1" ref={this.or}>OR</span> <button class="button2" ref={this.picButton} onClick={this.handleTakePic}>Take a Photo</button>
+            <button class="button1" ref={this.submitButton} onClick={this.handleSubmit}>Submit</button>
           </div>
         </div>
       </div>
@@ -156,21 +255,23 @@ class CustomerApp extends Component {
         </div>
       </div>
 
-      <div className="modal">
+      <div className="modal" ref={this.popup}>
         <div className="modal-inner">
-          <h2>Slide the puzzle to the correct spot</h2>
+          {/* <h2>Slide the puzzle to the correct spot</h2>
           <div className="img">
             <img src="test.png" alt="Puzzle" style={{ width: "405px" }} />
           </div>
           <div className="range">
             <input type="range" id="slider" min="0" max="250.4" value="0" step="0.1" />
           </div>
-          <div className="val"></div>
-          <button className="submit-captcha">Submit</button>
+          <div className="val"></div> */}
+          <video playsInline autoPlay ref={this.video}></video>
+          <canvas ref={this.canvas}></canvas> 
+          <button className="capture" ref={this.capture} onClick={this.handleCapture}>Capture</button>
         </div>
       </div>
 
-      <div className="modal-bg"></div>
+      <div className="modal-bg" ref={this.popupBg}></div>
     </>
     )
   }

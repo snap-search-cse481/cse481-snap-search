@@ -132,6 +132,30 @@ h3 {
     color: white;
 }
 
+.button2 {
+    display: inline-block;
+    border: none;
+    color: #3264a8;
+    padding: 16px 32px;
+    text-align: center;
+    text-decoration: none;
+    /* display: inline-block; */
+    font-size: 16px;
+    margin: 4px 2px;
+    transition-duration: 0.4s;
+    cursor: pointer;
+
+    background-color: white;
+    color: #3264a8;
+    border: 2px solid white;
+    border-radius: 10px;
+}
+
+.button2:hover {
+    background-color: #3264a8;
+    color: white;
+}
+
 
 .container1 {
     width: 100%;
@@ -193,6 +217,8 @@ h2 {
 }
 
 .modal-inner {
+    display: flex;
+    flex-direction: column;
     background-color: white;
     border-radius: 10px;
     /* box-shadow: 0 30px 50px black; */
@@ -201,7 +227,7 @@ h2 {
     justify-items: center;
     align-items: center;
     width: 450px auto;
-    height: 600px auto;
+    height: 800px auto;
 }
 
 .modal-bg {
@@ -257,7 +283,7 @@ h2 {
     cursor: pointer;
 }
 
-.submit-captcha {
+.capture {
     border: none;
     color: white;
     padding: 16px 32px;
@@ -265,7 +291,7 @@ h2 {
     text-decoration: none;
     /* display: inline-block; */
     font-size: 16px;
-    margin: 4px 2px;
+    margin-top: 15px;
     transition-duration: 0.4s;
     cursor: pointer;
 
@@ -275,7 +301,7 @@ h2 {
     border-radius: 10px;
 }
 
-.submit-captcha:hover {
+.capture:hover {
     background-color: white;
     color: #3264a8;
 }
@@ -285,4 +311,15 @@ h2 {
     font-weight: 300;
     font-size: 10px;
     color: #3264a8;
+}
+
+.header1 {
+    display: block;
+    font-size: 20px;
+    font-weight: 500;
+    color: white;
+}
+
+canvas {
+    display: none;
 }
