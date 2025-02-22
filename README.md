@@ -6,14 +6,12 @@
 ```bash
 cd user_interface
 npm run install:frontend
-npm run install:backend
 ```
 ## Running the frontend user interface
-It's current broken up into 2 parts. `frontend` is the actual web UI and `backend` is the server for receiving images. The latter is now directly in Python with flask in `backend/handle_image_upload.py` which will automatically spawn a new thread to send the image to the face search engine, so it's probably not necessary in the future.
+`frontend` is the actual web UI and the server is for receiving images. The latter is implemented in Python with flask in `backend/handle_image_upload.py` which will automatically spawn a new thread to send the image to the face search engine.
 
 Assuming we're already in the `user_interface` directory.
 
-- To launch the current UI backend use `npm run start:server`.
 - Then you can run the actual web UI with `npm run start:frontend`
 
 # Running the Python backend
