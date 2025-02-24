@@ -4,6 +4,9 @@ from collections import Counter
 import re
 import time
 from nltk.corpus import stopwords
+import nltk
+
+nltk.download('stopwords')
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

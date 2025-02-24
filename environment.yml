@@ -12,5 +12,6 @@ dependencies:
   - flask
   - flask-cors
   - tqdm
+  - nltk
   - ollama-python
   - beautifulsoup4
