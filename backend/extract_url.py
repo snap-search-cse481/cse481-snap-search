@@ -3,6 +3,8 @@ import base64
 import json
 import re
 from typing import List, Tuple
+import csv
+from os import path as osp
 
 def extract_facecheck_url(id_search: str) -> List[Tuple[int,str]]:
     # URL and headers for the POST request
@@ -62,5 +64,12 @@ def extract_facecheck_url(id_search: str) -> List[Tuple[int,str]]:
         return []
 
 if __name__ == "__main__":
-    res = extract_facecheck_url('oapR24elBOQ')
+    res = extract_facecheck_url('KWKVX8yBPb0')
     print(res)
+
+    output_path = osp.dirname(osp.realpath(__file__))
+    output_path = osp.join(output_path, 'uploads', 'test.csv')
+    with open(output_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        for row in res:
+            writer.writerow(row)
