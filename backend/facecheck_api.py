@@ -2,17 +2,30 @@ import time
 import requests
 import urllib.request
 import os
+import os.path as osp
 from tqdm import tqdm
+import csv
 
 TESTING_MODE = True
 APITOKEN = '' # Your API Token
 
-def search_by_face(image_file, debug=False):
+def search_by_face(image_file, debug=False, bypass=False):
+    # Allow us to bypass facecheck for testing purposes
+    if bypass:
+        print("****** BYPASSING FACECHECK with local file ******")
+        example_path = osp.dirname(osp.realpath(__file__))
+        example_path = osp.join(example_path, 'uploads', 'test.csv')
+        assert osp.exists(example_path), f'File {example_path} must exist for bypass mode'
+        with open(example_path, 'r') as file:
+            reader = csv.reader(file)
+            return None, [(int(row[0]), row[1]) for row in reader]
+
     if TESTING_MODE:
         print('****** TESTING MODE search, results are inacurate, and queue wait is long, but credits are NOT deducted ******')
 
     assert APITOKEN, 'You must set your API token in the APITOKEN variable'
 
+    # Upload image to facecheck
     site='https://facecheck.id'
     headers = {'accept': 'application/json', 'Authorization': APITOKEN}
     files = {'images': open(image_file, 'rb'), 'id_search': None}
@@ -43,11 +56,12 @@ def search_by_face(image_file, debug=False):
                 if posn > 0:
                     pbar.set_description(f'Position in queue: {0}')
                     pbar.update(1)
-                links_with_scores = [(img['score'], img['url']) for img in response['output']['items']]
-                links_with_scores.sort(reverse=True, key=lambda x: x[0])
                 # Debug prints
                 if debug:
                     print_result(response['output']['items'])
+                # Filter down to just the score & url
+                links_with_scores = [(img['score'], img['url']) for img in response['output']['items']]
+                links_with_scores.sort(reverse=True, key=lambda x: x[0])
                 return None, links_with_scores
             
             # Handle progress response & update progress bar accordingly

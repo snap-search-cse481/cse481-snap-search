@@ -4,6 +4,10 @@ from collections import Counter
 import re
 import time
 from nltk.corpus import stopwords
+import nltk
+from tqdm import tqdm
+
+nltk.download('stopwords')
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -13,17 +17,18 @@ USER_AGENT = (
 
 # List of domains to avoid scraping (from previous errors)
 DO_NOT_SCRAPE_DOMAINS = {
-    "etsy.com",
-    "facebook.com",
-    "usnews.com",
     "azernews.az",
     "catchmyparty.com",
-    "news.com.au",
+    "creekcountysheriff.com"
+    "etsy.com",
+    "facebook.com",
     "health.usnews.com",
+    "heraldsun.com.au",
+    "instagram.com",
+    "news.com.au",
     "thecontactdetails.com",
     "tullahomanews.com",
-    "heraldsun.com.au",
-    "creekcountysheriff.com"
+    "usnews.com",
 }
 
 def should_skip_url(url):
@@ -71,7 +76,7 @@ def build_signature_from_top5(top5_urls):
     additional_ignore = {"com", "www", "http", "https", "org", "bsky", "app", "profile"}
     common_stopwords.update(additional_ignore)
 
-    for url in top5_urls:
+    for url in tqdm(top5_urls):
         page_text = get_page_text(url)
         if page_text:
             words = tokenize(page_text)
