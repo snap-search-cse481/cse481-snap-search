@@ -3,11 +3,21 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from threading import Thread
 import os
+import os.path as osp
+import sys
 from tqdm import tqdm
 
 from facecheck_api import search_by_face
 from sentence_embedding import build_signature_from_top5, compute_signature_overlap, get_page_text
 from typing import Dict
+
+lm_dir = osp.join(osp.abspath(osp.join(osp.dirname(__file__), '..')), "language_models")
+sys.path.append(lm_dir)
+from lm_client import OllamaClient
+
+
+lm_client = OllamaClient(system_prompt=OllamaClient.filter_summarize_prompt,
+                            custom_name='filter_summarize')
 
 def threaded_face_search(file_path, results_container):
     """Runs the face search & sentence embedding processing in a separate thread and stores categorized links."""
@@ -20,6 +30,10 @@ def threaded_face_search(file_path, results_container):
     
     top5 = [x[1] for x in links_with_scores[:5]]
     the_rest = [x[1] for x in links_with_scores[5:]]
+
+    # Cap to 30 results to speed up processing (for now)
+    if len(the_rest) > 30:
+        the_rest = the_rest[:30]
     
     # Process top5 signatures
     print("Building top 5 signatures...")
@@ -52,9 +66,13 @@ def threaded_face_search(file_path, results_container):
     results_container["yes_list"] = yes_list
     results_container["no_list"] = no_list
 
-    ##### Make calls to LLM
-    for url, text in web_content.items():
-        print(f"Processed {url} with text {text[:200]}...\n")
+    ##### Make calls to LLM #####
+    query = ["Summarize the person most frequently mentioned in the text below"]
+
+    for result in top5:
+        query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
+
+    lm_client.query_lm(" ".join(query))
 
 
 app = Flask(__name__)
