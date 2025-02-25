@@ -31,9 +31,9 @@ def threaded_face_search(file_path, results_container):
     top5 = [x[1] for x in links_with_scores[:5]]
     the_rest = [x[1] for x in links_with_scores[5:]]
 
-    # Cap to 30 results to speed up processing (for now)
-    if len(the_rest) > 30:
-        the_rest = the_rest[:30]
+    # Cap to 10 results to speed up processing (for now)
+    if len(the_rest) > 10:
+        the_rest = the_rest[:10]
     
     # Process top5 signatures
     print("Building top 5 signatures...")
@@ -67,10 +67,18 @@ def threaded_face_search(file_path, results_container):
     results_container["no_list"] = no_list
 
     ##### Make calls to LLM #####
-    query = ["Summarize the person most frequently mentioned in the text below"]
+    query = []
+
+    if len(yes_list) > 2:
+        yes_list = yes_list[:2]
+    for result in yes_list:
+        query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
 
     for result in top5:
         query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
+    
+    print("\n⏳ Querying LLM...")
+    query.append("Summarize basic information (name, most recent job, etc.) about the person most frequently mentioned in the text above. Keep your summary concise and under 60 words.")
 
     lm_client.query_lm(" ".join(query))
 
@@ -111,7 +119,7 @@ def upload_photo():
     # Start the search in a separate thread
     face_search_worker = Thread(target=threaded_face_search, args=(file_path, results_container))
     face_search_worker.start()
-    face_search_worker.join()  # Wait for thread to finish
+    # face_search_worker.join()  # Wait for thread to finish
     
     # if "error" in results_container and results_container["error"]:
     #     return jsonify({"error": results_container["error"]}), 500

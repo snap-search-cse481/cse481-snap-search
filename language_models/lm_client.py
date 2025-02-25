@@ -11,7 +11,7 @@ class OllamaClient:
 
     def __init__(self,
                  host: str='http://fruit.alexluo.com:11434',
-                 model: str='qwen2.5:14b',
+                 model: str='qwen2.5:1.5b',
                  system_prompt: Optional[str]=None,
                  custom_name: Optional[str]=None):
         self.client: ChatResponse = Client(
@@ -41,8 +41,9 @@ class OllamaClient:
         response = self.client.chat(
             model=self.model,
             messages=[msg],
-            options={'num_ctx': 2048},
-            stream=True)
+            options={'num_ctx': 12288},
+            stream=True,
+            keep_alive=15)
         
         for chunk in response:
             print(chunk['message']['content'], end='', flush=True)
@@ -50,8 +51,9 @@ class OllamaClient:
 
 
 if __name__ == '__main__':
-    client = OllamaClient(system_prompt=OllamaClient.filter_summarize_prompt,
-                          custom_name='filter_summarize')
+    # client = OllamaClient(system_prompt=OllamaClient.filter_summarize_prompt,
+    #                       custom_name='filter_summarize')
+    client = OllamaClient()
     if len(sys.argv) > 1:
         client.query_lm(" ".join(sys.argv[1:]))
     else:
