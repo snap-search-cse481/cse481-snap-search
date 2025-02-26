@@ -3,11 +3,21 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from threading import Thread
 import os
+import os.path as osp
+import sys
 from tqdm import tqdm
 
 from facecheck_api import search_by_face
 from sentence_embedding import build_signature_from_top5, compute_signature_overlap, get_page_text
 from typing import Dict
+
+lm_dir = osp.join(osp.abspath(osp.join(osp.dirname(__file__), '..')), "language_models")
+sys.path.append(lm_dir)
+from lm_client import OllamaClient
+
+
+lm_client = OllamaClient(system_prompt=OllamaClient.filter_summarize_prompt,
+                            custom_name='filter_summarize')
 
 def threaded_face_search(file_path, results_container):
     """Runs the face search & sentence embedding processing in a separate thread and stores categorized links."""
@@ -20,6 +30,10 @@ def threaded_face_search(file_path, results_container):
     
     top5 = [x[1] for x in links_with_scores[:5]]
     the_rest = [x[1] for x in links_with_scores[5:]]
+
+    # Cap to 10 results to speed up processing (for now)
+    if len(the_rest) > 10:
+        the_rest = the_rest[:10]
     
     # Process top5 signatures
     print("Building top 5 signatures...")
@@ -52,9 +66,21 @@ def threaded_face_search(file_path, results_container):
     results_container["yes_list"] = yes_list
     results_container["no_list"] = no_list
 
-    ##### Make calls to LLM
-    for url, text in web_content.items():
-        print(f"Processed {url} with text {text[:200]}...\n")
+    ##### Make calls to LLM #####
+    query = []
+
+    if len(yes_list) > 2:
+        yes_list = yes_list[:2]
+    for result in yes_list:
+        query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
+
+    for result in top5:
+        query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
+    
+    print("\n⏳ Querying LLM...")
+    query.append("Summarize basic information (name, most recent job, etc.) about the person most frequently mentioned in the text above. Keep your summary concise and under 60 words.")
+
+    lm_client.query_lm(" ".join(query))
 
 
 app = Flask(__name__)
@@ -93,7 +119,7 @@ def upload_photo():
     # Start the search in a separate thread
     face_search_worker = Thread(target=threaded_face_search, args=(file_path, results_container))
     face_search_worker.start()
-    face_search_worker.join()  # Wait for thread to finish
+    # face_search_worker.join()  # Wait for thread to finish
     
     # if "error" in results_container and results_container["error"]:
     #     return jsonify({"error": results_container["error"]}), 500
