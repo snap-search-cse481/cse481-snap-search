@@ -6,6 +6,7 @@ import time
 from nltk.corpus import stopwords
 import nltk
 from tqdm import tqdm
+from typing import Optional, Dict
 
 nltk.download('stopwords')
 
@@ -65,7 +66,7 @@ def tokenize(text):
     text = re.sub(r'[^a-z\s]', '', text)
     return text.split()
 
-def build_signature_from_top5(top5_urls):
+def build_signature_from_top5(top5_urls, cache: Optional[Dict[str, str]] = None):
     """
     1. Fetch + tokenize text from each top-5 URL.
     2. Aggregate and find top frequent words.
@@ -81,6 +82,9 @@ def build_signature_from_top5(top5_urls):
         if page_text:
             words = tokenize(page_text)
             all_words.extend(words)
+            # Optional cache the page text
+            if cache is not None:
+                cache[url] = page_text
         time.sleep(1)
 
     freq = Counter(w for w in all_words if w not in common_stopwords and len(w) > 2)
