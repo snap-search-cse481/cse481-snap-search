@@ -1,4 +1,4 @@
-name: cse481
+name: 481_repo
 channels:
   - defaults
   - conda-forge
@@ -15,3 +15,4 @@ dependencies:
   - nltk
   - ollama-python
   - beautifulsoup4
+  - dspy-ai

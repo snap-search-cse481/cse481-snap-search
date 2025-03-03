@@ -3,7 +3,7 @@ import dspy
 from ollama import ChatResponse, Client, ListResponse
 import ollama
 import sys
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 class OllamaClient:
     dummy_prompt: str = "You are a helpful assistant."
@@ -21,7 +21,7 @@ class OllamaClient:
                 # Original client initialization
                 self.client: ChatResponse = Client(host=host, headers={'x-some-header': 'some-value'})
                 self.model = model
-                assert (system_prompt is None) == (custom_name is None), "Must supply a custom model name if customizing system prompot"
+                assert (system_prompt is None) == (custom_name is None), "Must supply a custom model name if customizing system prompt"
                 self.system_prompt = system_prompt
                 self.custom_name = custom_name
 
@@ -43,7 +43,8 @@ class OllamaClient:
                 self.dspy_lm = dspy.LM(
                     model=dspy_model_name,
                     api_base=host,
-                    api_key=''
+                    api_key='',
+                    cache=False  # Disable caching
                 )
                 dspy.configure(lm=self.dspy_lm)
                 # print(f"Configured DSPy with model: {dspy_model_name}")
@@ -69,21 +70,79 @@ class OllamaClient:
             print(chunk['message']['content'], end='', flush=True)
         print()
 
-    # New method for structured extraction using DSPy
-    def extract_person_info(self, text: str) -> dspy.Prediction:
+    # Improved method for structured extraction using DSPy
+    def extract_person_info(self, text: str) -> Dict[str, Any]:
         """Extract structured person information using DSPy's ChainOfThought"""
-        class PersonSignature(dspy.Signature):
-            """Extract person details from text. Adhere strictly to given information."""
-            text = dspy.InputField(desc="Text containing personal information")
-            name = dspy.OutputField()
-            profession = dspy.OutputField()
-            workplace = dspy.OutputField()
-            email = dspy.OutputField()
-            phone = dspy.OutputField()
-            fun_facts = dspy.OutputField(format=list)
-
-        extractor = dspy.ChainOfThought(PersonSignature)
-        return extractor(text=text)
+        
+        # First, use a simpler approach to identify the person's name
+        class IdentifyPersonSignature(dspy.Signature):
+            """Identify the most frequently mentioned person in the text."""
+            text = dspy.InputField(desc="Text containing information about various people")
+            person_name = dspy.OutputField(desc="The full name of the most frequently mentioned person")
+        
+        identify = dspy.ChainOfThought(IdentifyPersonSignature)
+        name_result = identify(text=text)
+        
+        # Then use a direct approach with the ollama client for better extraction
+        prompt = f"""
+        Based on the following text, extract structured information about {name_result.person_name}.
+        Text: {text}
+        
+        Provide a JSON object with the following fields:
+        - name: Full name
+        - profession: Current job or profession
+        - workplace: Current workplace or affiliation
+        - email: Email address if available
+        - phone: Phone number if available
+        - fun_facts: A list of 3-5 interesting facts about the person
+        
+        If any field is not available in the text, leave it blank or empty list for fun_facts.
+        Format your response ONLY as valid JSON with these exact field names.
+        """
+        
+        # Use direct ollama client for better structured response
+        msg = {'role': 'user', 'content': prompt}
+        response = self.client.chat(
+            model=self.model,
+            messages=[msg],
+            options={'num_ctx': 12288},
+            stream=False,
+            keep_alive=15)
+        
+        response_text = response['message']['content']
+        
+        # Extract JSON part from response
+        import json
+        import re
+        
+        # Try to find JSON in the response
+        json_match = re.search(r'```json\n(.*?)\n```', response_text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            # If no json code block, try to find anything that looks like a JSON object
+            json_match = re.search(r'(\{.*\})', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                json_str = response_text
+        
+        try:
+            # Try to parse the JSON
+            person_data = json.loads(json_str)
+            return person_data
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return a structured dict with the raw text
+            print("Failed to parse JSON from model response. Returning raw text.")
+            return {
+                "name": name_result.person_name,
+                "profession": "",
+                "workplace": "",
+                "email": "",
+                "phone": "",
+                "fun_facts": ["Information extraction failed"],
+                "raw_response": response_text
+            }
 
 if __name__ == '__main__':
     client = OllamaClient()
@@ -91,17 +150,19 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         input_text = " ".join(sys.argv[1:])
         
-        # Using DSPy for structured extraction
+        # Using improved extraction
         result = client.extract_person_info(input_text)
         
         # Formatting the output
-        print(f"Name: {result.name}")
-        print(f"Profession: {result.profession}")
-        print(f"Workplace: {result.workplace}")
-        print(f"Email: {result.email}")
-        print(f"Phone: {result.phone}")
-        print(f"Fun Facts: {result.fun_facts}")
+        print(f"Name: {result.get('name', '')}")
+        print(f"Profession: {result.get('profession', '')}")
+        print(f"Workplace: {result.get('workplace', '')}")
+        print(f"Email: {result.get('email', '')}")
+        print(f"Phone: {result.get('phone', '')}")
+        print(f"Fun Facts:")
+        for fact in result.get('fun_facts', []):
+            print(f"- {fact}")
 
     else:
         # Fallback to original query method
-        client.query_lm()
+        client.query_lm()   

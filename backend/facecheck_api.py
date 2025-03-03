@@ -7,7 +7,7 @@ from tqdm import tqdm
 import csv
 
 TESTING_MODE = True
-APITOKEN = '' # Your API Token
+APITOKEN = 'Vc+ae8M5ibx+Sad2eWwBvRxfozjmM3US3seDlTztpdJTTNpKAkSy8AupuS2fXUKFGV02rwI2r9s=' # Your API Token
 
 def search_by_face(image_file, debug=False, bypass=False):
     # Allow us to bypass facecheck for testing purposes

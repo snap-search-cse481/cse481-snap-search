@@ -21,7 +21,7 @@ lm_client = OllamaClient(system_prompt=OllamaClient.filter_summarize_prompt,
 
 def threaded_face_search(file_path, results_container):
     """Runs the face search & sentence embedding processing in a separate thread and stores categorized links."""
-    error_msg, results = search_by_face(file_path, bypass=False)
+    error_msg, results = search_by_face(file_path, bypass=True)
     results_container["error"] = error_msg
     results_container["results"] = results
 
@@ -66,21 +66,35 @@ def threaded_face_search(file_path, results_container):
     results_container["yes_list"] = yes_list
     results_container["no_list"] = no_list
 
-    ##### Make calls to LLM #####
-    query = []
-
+    # Use improved DSPy for structured extraction
+    combined_text = ""
+    
+    # Combine texts from relevant sources
     if len(yes_list) > 5:
         yes_list = yes_list[:5]
     for result in yes_list:
-        query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
+        combined_text += f"\nSOURCE {len(combined_text)}:\n {web_content.get(result, '')}\n"
 
     for result in top5:
-        query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
+        combined_text += f"\nSOURCE {len(combined_text)}:\n {web_content.get(result, '')}\n"
     
-    print("\n⏳ Querying LLM...")
-    query.append("Summarize basic information (name, most recent job, etc.) about the person most frequently mentioned in the text above. Keep your summary concise and under 60 words.")
-
-    lm_client.query_lm(" ".join(query))
+    print("\nQuerying LLM")
+    
+    # Use the improved extraction method
+    person_info = lm_client.extract_person_info(combined_text)
+    
+    # Store the structured information in the results container
+    results_container["person_info"] = person_info
+    
+    # Print the extracted information
+    print(f"Name: {person_info.get('name', '')}")
+    print(f"Profession: {person_info.get('profession', '')}")
+    print(f"Workplace: {person_info.get('workplace', '')}")
+    print(f"Email: {person_info.get('email', '')}")
+    print(f"Phone: {person_info.get('phone', '')}")
+    print("Fun Facts:")
+    for fact in person_info.get('fun_facts', []):
+        print(f"- {fact}")
 
 
 app = Flask(__name__)
@@ -119,19 +133,10 @@ def upload_photo():
     # Start the search in a separate thread
     face_search_worker = Thread(target=threaded_face_search, args=(file_path, results_container))
     face_search_worker.start()
-    # face_search_worker.join()  # Wait for thread to finish
+    face_search_worker.join()  # Wait for thread to finish
     
-    # if "error" in results_container and results_container["error"]:
-    #     return jsonify({"error": results_container["error"]}), 500
-
-    # debugging
-    # print("top 5")
-    # print(results_container["top5"])
-    # print("yes list")
-    # print(results_container["yes_list"])
-    # print("no list")
-    # print(results_container["no_list"])
-
+    if "error" in results_container and results_container["error"]:
+        return jsonify({"error": results_container["error"]}), 500
     
     return jsonify({
         "message": "Image successfully uploaded",
@@ -139,7 +144,8 @@ def upload_photo():
         "results": results_container.get("results", []),
         "top5": results_container.get("top5", []),
         "yes_list": results_container.get("yes_list", []),
-        "no_list": results_container.get("no_list", [])
+        "no_list": results_container.get("no_list", []),
+        "person_info": results_container.get("person_info", {})
     }), 200
 
 if __name__ == '__main__':
