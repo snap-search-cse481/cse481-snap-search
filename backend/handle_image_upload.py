@@ -69,8 +69,8 @@ def threaded_face_search(file_path, results_container):
     ##### Make calls to LLM #####
     query = []
 
-    if len(yes_list) > 2:
-        yes_list = yes_list[:2]
+    if len(yes_list) > 5:
+        yes_list = yes_list[:5]
     for result in yes_list:
         query.append(f"\nSOURCE {len(query)}:\n {get_page_text(result)}\n")
 
