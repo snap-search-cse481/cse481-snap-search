@@ -77,7 +77,7 @@ def build_signature_from_top5(top5_urls, cache: Optional[Dict[str, str]] = None)
     additional_ignore = {"com", "www", "http", "https", "org", "bsky", "app", "profile"}
     common_stopwords.update(additional_ignore)
 
-    for url in tqdm(top5_urls):
+    for url in tqdm(top5_urls, desc="🏗️ Building signature"):
         page_text = get_page_text(url)
         if page_text:
             words = tokenize(page_text)
@@ -85,7 +85,7 @@ def build_signature_from_top5(top5_urls, cache: Optional[Dict[str, str]] = None)
             # Optional cache the page text
             if cache is not None:
                 cache[url] = page_text
-        time.sleep(1)
+        # time.sleep(1)
 
     freq = Counter(w for w in all_words if w not in common_stopwords and len(w) > 2)
     return set(w for w, _ in freq.most_common(50))

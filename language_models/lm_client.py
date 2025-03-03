@@ -13,7 +13,7 @@ class OllamaClient:
 
     def __init__(self,
                  hosts: List[str] = default_servers,
-                 model: str = 'qwen2.5:3b',
+                 model: str = 'qwen2.5:1.5b',
                  system_prompt: Optional[str] = None,
                  custom_name: Optional[str] = None):
         for host in hosts:
@@ -94,7 +94,7 @@ class OllamaClient:
         - workplace: Current workplace or affiliation
         - email: Email address if available
         - phone: Phone number if available
-        - fun_facts: A list of 3-5 interesting facts about the person
+        - fun_facts: A list of 3-5 interesting facts strictly about the person
         
         If any field is not available in the text, leave it blank or empty list for fun_facts.
         Format your response ONLY as valid JSON with these exact field names.

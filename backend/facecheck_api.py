@@ -5,11 +5,14 @@ import os
 import os.path as osp
 from tqdm import tqdm
 import csv
+from typing import Optional, List, Tuple
 
 TESTING_MODE = True
 APITOKEN = 'Vc+ae8M5ibx+Sad2eWwBvRxfozjmM3US3seDlTztpdJTTNpKAkSy8AupuS2fXUKFGV02rwI2r9s=' # Your API Token
 
-def search_by_face(image_file, debug=False, bypass=False):
+ResultEntry = Tuple[int, str]
+
+def search_by_face(image_file, debug=False, bypass=False) -> Tuple[Optional[str], Optional[List[ResultEntry]]]:
     # Allow us to bypass facecheck for testing purposes
     if bypass:
         print("****** BYPASSING FACECHECK with local file ******")
