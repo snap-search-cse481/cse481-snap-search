@@ -183,31 +183,136 @@ handleCapture = () => {
   }
 };
 
-  handleSubmit = () => {
-    const handleUpload = async () => {
+  // handleSubmit = () => {
+  //   const handleUpload = async () => {
 
-        const formData = new FormData();
-        formData.append('image', this.state.file);  // Ensure key matches backend
+  //       const formData = new FormData();
+  //       formData.append('image', this.state.file);  // Ensure key matches backend
 
-        try {
-            const response = await axios.post('http://localhost:3001/uploadphoto', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            console.log('Upload success:', response.data);
-            alert('Image uploaded successfully!');
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            alert('Upload failed.');
+  //       try {
+  //           const response = await axios.post('http://localhost:3001/uploadphoto', formData, {
+  //               headers: { 'Content-Type': 'multipart/form-data' }
+  //           });
+  //           console.log('Upload success:', response.data);
+  //           alert('Image uploaded successfully!');
+  //       } catch (error) {
+  //           console.error('Error uploading image:', error);
+  //           alert('Upload failed.');
+  //       }
+  //   };
+
+  //   handleUpload();
+  //   this.submitButton.current.style.display = 'none';
+  //   this.loadingGif();
+  // };
+
+  handleSubmit = async () => {
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('image', this.state.file);
+  
+    // Clear any previous results or loading states
+    this.resultsContainerRef.current.innerHTML = '';
+  
+
+    try {
+      // Use fetch to POST and keep the response body as a stream
+      const response = await fetch('http://localhost:3001/uploadphoto', {
+        method: 'POST',
+        body: formData
+      });
+
+      // If needed, handle final UI updates after SSE completes
+      this.submitButton.current.style.display = 'none';
+
+      // If the server didn't accept the request
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+      
+      // We now have a ReadableStream in response.body
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+  
+      let partialChunk = '';
+  
+      // Continuously read the incoming chunks
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          console.log('SSE stream finished');
+          break;
         }
-    };
+        
+        // Decode chunk to text
+        const chunk = decoder.decode(value, { stream: true });
+        partialChunk += chunk;
+  
+        // Split on newlines to see if we have complete SSE lines
+        const lines = partialChunk.split('\n');
+        // Leave the last line in partialChunk if it's incomplete
+        partialChunk = lines.pop();  
+  
+        // Parse each full line
+        let event_type = 'error';
+        for (let line of lines) {
+          line = line.trim();
+          
+          // Typical SSE lines can look like:
+          // event: progress
+          // data: Some message
+          if (line.startsWith('event:')) {
+            const evt = line.replace('event:', '').trim();
+            console.log('SSE Event:', evt);
+            event_type = evt;
+          } else if (line.startsWith('data:')) {
+            // This is the actual data payload for the event
+            const data = line.replace('data:', '').trim();
+            console.log('SSE Data:', data);
+            if (event_type === 'progress') {
+              this.handleProgressSSE(data);
+            } else if (event_type === 'result') {
+              this.handleResultSSE(data);
+            } else if (event_type === 'error') {
+              this.handleErrorSSE(data);
+            }
+          }
+        }
+      }
 
-    handleUpload();
-    this.submitButton.current.style.display = 'none';
-    this.loadingGif();
+  
+    } catch (error) {
+      console.error('Error receiving SSE:', error);
+      alert('Upload or SSE reception failed.');
+    }
   };
 
-  loadingGif = () => {
-    this.resultsContainerRef.current.innerHTML = `<img src="https://i.gifer.com/ZKZg.gif" alt="Loading..." class="img">`;
+  // Handle progress updates from the server
+  handleProgressSSE = (data) => {
+    this.resultsContainerRef.current.innerHTML = `<img src="https://i.gifer.com/ZKZg.gif" alt="Loading..." class="img"><p>${data}</p>`;
+  };
+
+  // Handle the final result from the server
+  handleResultSSE = (data) => {
+    console.log(data);
+    let parsedData = JSON.parse(data);
+    this.resultsContainerRef.current.innerHTML = `
+      <p>🎉 Results:</p>
+      <p>👤 Name: ${parsedData.name}</p>
+      <p>💼 Profession: ${parsedData.profession}</p>
+      <p>🏢 Workplace: ${parsedData.workplace}</p>
+      <p>📞 Phone: ${parsedData.phone}</p>
+      <p>📧 Email: ${parsedData.email}</p>
+    `;
+    if (Object.hasOwn(parsedData, 'fun_facts')) {
+      this.resultsContainerRef.current.innerHTML += `<p>🎉 Fun Facts: ${parsedData.fun_facts}</p>`;
+    }
+
+  };
+
+  // Handle any errors from the server
+  handleErrorSSE = (error) => {
+    this.resultsContainerRef.current.innerHTML = `<p>⚠️ An error occured: ${error}</p>`;
   };
 
   render() {

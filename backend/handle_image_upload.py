@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, Response, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from threading import Thread
@@ -6,96 +6,70 @@ import os
 import os.path as osp
 import sys
 from tqdm import tqdm
+import time
+import json
 
-from facecheck_api import search_by_face
+from facecheck_api import search_by_face, ResultEntry
 from sentence_embedding import build_signature_from_top5, compute_signature_overlap, get_page_text
-from typing import Dict
+from typing import Optional, Dict, List, Tuple
 
 lm_dir = osp.join(osp.abspath(osp.join(osp.dirname(__file__), '..')), "language_models")
 sys.path.append(lm_dir)
 from lm_client import OllamaClient
 
 
-lm_client = OllamaClient(system_prompt=OllamaClient.filter_summarize_prompt,
-                            custom_name='filter_summarize')
+lm_client = OllamaClient()
 
-def threaded_face_search(file_path, results_container):
-    """Runs the face search & sentence embedding processing in a separate thread and stores categorized links."""
-    error_msg, results = search_by_face(file_path, bypass=True)
-    results_container["error"] = error_msg
-    results_container["results"] = results
 
-    links_with_scores = results_container.get("results", [])
-    links_with_scores.sort(key=lambda x: x[0], reverse=True)
-    
-    top5 = [x[1] for x in links_with_scores[:5]]
-    the_rest = [x[1] for x in links_with_scores[5:]]
-
-    # Cap to 10 results to speed up processing (for now)
-    if len(the_rest) > 10:
-        the_rest = the_rest[:10]
-    
-    # Process top5 signatures
-    print("Building top 5 signatures...")
-    signature = build_signature_from_top5(top5)
-    
-    yes_list = []
-    no_list = []
-    
-    web_content: Dict[str, str] = {}
-
+def filter_links_worker(signature_data,
+                results: List[ResultEntry],
+                output: List[ResultEntry],
+                cache:Optional[Dict[str, str]] = None):
     # Filter the rest of the links
-    for url in tqdm(the_rest, desc="Filtering relevant sources signatures"):
+    for res in results:
+        url = res[1]
         page_text = get_page_text(url)
-        if page_text:
-            if compute_signature_overlap(signature, page_text):
-                yes_list.append(url)
-                web_content[url] = page_text
-            else:
-                no_list.append(url)
-        else:
-            no_list.append(url)
-    
-    # Caches content from top 5
-    for url in top5:
-        page_text = get_page_text(url)
-        if page_text:
-            web_content[url] = page_text
+        if page_text and compute_signature_overlap(signature_data, page_text):
+            output.append(res)
+            # Optionally cache web text
+            if cache is not None:
+                cache[url] = page_text
 
-    results_container["top5"] = top5
-    results_container["yes_list"] = yes_list
-    results_container["no_list"] = no_list
 
-    # Use improved DSPy for structured extraction
-    combined_text = ""
-    
-    # Combine texts from relevant sources
-    if len(yes_list) > 5:
-        yes_list = yes_list[:5]
-    for result in yes_list:
-        combined_text += f"\nSOURCE {len(combined_text)}:\n {web_content.get(result, '')}\n"
+def filter_links(signature_data,
+                 src_results: List[ResultEntry],
+                 cache: Optional[Dict[str, str]] = None,
+                 limit: int = 10) -> List[ResultEntry]:
+    yes_list: List[Tuple[int, str]] = []
 
-    for result in top5:
-        combined_text += f"\nSOURCE {len(combined_text)}:\n {web_content.get(result, '')}\n"
-    
-    print("\nQuerying LLM")
-    
-    # Use the improved extraction method
-    person_info = lm_client.extract_person_info(combined_text)
-    
-    # Store the structured information in the results container
-    results_container["person_info"] = person_info
-    
-    # Print the extracted information
-    print(f"Name: {person_info.get('name', '')}")
-    print(f"Profession: {person_info.get('profession', '')}")
-    print(f"Workplace: {person_info.get('workplace', '')}")
-    print(f"Email: {person_info.get('email', '')}")
-    print(f"Phone: {person_info.get('phone', '')}")
-    print("Fun Facts:")
-    for fact in person_info.get('fun_facts', []):
-        print(f"- {fact}")
+    if limit < len(src_results):
+        src_results = src_results[:limit]
 
+    start = time.time()
+
+    num_cpus = os.cpu_count()
+    assert num_cpus is not None
+    NUM_WORKERS = min(len(src_results), num_cpus)
+    step = len(src_results) // NUM_WORKERS
+    threads = []
+    for i in range(NUM_WORKERS):
+        start_idx = i * step
+        end_idx = (i + 1) * step if i < NUM_WORKERS - 1 else len(src_results)
+        thread = Thread(target=filter_links_worker, args=(signature_data, src_results[start_idx:end_idx], yes_list, cache))
+        thread.start()
+        threads.append(thread)
+
+    
+    for thread in threads:
+        thread.join()
+    
+    # Sort in descending score order (Order might've been changed by threading)
+    yes_list.sort(key=lambda x: x[0], reverse=True)
+
+    end = time.time()
+    print(f"🔎 Filtered links in {end - start:.2f} seconds")
+    
+    return yes_list
 
 app = Flask(__name__)
 CORS(app)  # This enables CORS for all routes
@@ -107,6 +81,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/uploadphoto', methods=['POST'])
 def upload_photo():
+    start = time.time()
     # Check if the request contains the file part
     if 'image' not in request.files:
         return jsonify({"error": "No image part in the request"}), 400
@@ -114,7 +89,7 @@ def upload_photo():
     image = request.files['image']
     
     # Check if a file was selected
-    if image.filename == '':
+    if image.filename is None or image.filename == '':
         return jsonify({"error": "No selected file"}), 400
     
     # Optionally validate the file extension
@@ -128,25 +103,81 @@ def upload_photo():
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     image.save(file_path)
 
-    results_container = {}
+    # The generator function that will yield SSE messages
+    def generate():
+        # 1) Searching by face
+        yield "event: progress\n"
+        yield "data: 😄 Running face search\n\n"
+        error_msg, search_results = search_by_face(file_path, bypass=True)
+        if search_results is None:
+            yield "event: error\n"
+            yield f"data: Face lookup error\n\"{error_msg}\"\n\n"
+            return
+        
+        # Web text cache
+        web_content: Dict[str, str] = {}
+        
+        # 2) Building signature
+        yield "event: progress\n"
+        yield "data: 🪪 Building profile signatures\n\n"
+        search_results.sort(key=lambda x: x[0], reverse=True)
+        top5 = [x[1] for x in search_results[:5]]
+        remaining_results = search_results[5:]
+        signature_data = build_signature_from_top5(top5, cache=web_content)
+        
+        # 3) Filtering additional links
+        yield "event: progress\n"
+        yield "data: 🔍 Finding & filtering additional information\n\n"
+        yes_list = filter_links(signature_data, remaining_results, cache=web_content)
+        
+        # 4) Querying LLM
+        yield "event: progress\n"
+        yield "data: 📝 Summarizing person information\n\n"
 
-    # Start the search in a separate thread
-    face_search_worker = Thread(target=threaded_face_search, args=(file_path, results_container))
-    face_search_worker.start()
-    face_search_worker.join()  # Wait for thread to finish
+        ##### Make calls to LLM #####
+        # Prepare the query
+        yes_list.extend(search_results[:5])
+        query = '.'.join([f"\nSOURCE:\n {web_content[url]}" for _, url in yes_list])
+        
+        print("🤖 Querying LLM...\n")
+
+        # Retry up to 3 times
+        person_info = None
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                person_info = lm_client.extract_person_info(query)
+                if person_info is not None and 'raw_response' not in person_info:
+                    break
+                
+                yield "event: progress\n"
+                yield f"data: 😥 Attempt {attempt + 1}/{max_attempts}: LLM returned malformatted summary, retrying...\n\n"
+                print(f"Attempt {attempt + 1}/{max_attempts} failed with error: LLM returned malformatted summary")
+            except Exception as e:
+                print(f"Attempt {attempt + 1}/{max_attempts} failed with error: {e}")
+        
+        if person_info is None or 'raw_response' in person_info:
+            yield "event: error\n"
+            yield "data: LLM failed to return a valid summary\n\n"
+            return
+        
+        # Print the extracted information
+        print(f"Name: {person_info.get('name', '')}")
+        print(f"Profession: {person_info.get('profession', '')}")
+        print(f"Workplace: {person_info.get('workplace', '')}")
+        print(f"Email: {person_info.get('email', '')}")
+        print(f"Phone: {person_info.get('phone', '')}")
+        print("Fun Facts:")
+        print("\n".join([f"- {fact}" for fact in person_info.get('fun_facts', [])]))
+        
+        # Return the result
+        yield "event: result\n"
+        yield f"data: {json.dumps(person_info)}\n\n"
+        end = time.time()
+        print(f"Total time: {end - start:.2f} seconds")
     
-    if "error" in results_container and results_container["error"]:
-        return jsonify({"error": results_container["error"]}), 500
-    
-    return jsonify({
-        "message": "Image successfully uploaded",
-        "filename": filename,
-        "results": results_container.get("results", []),
-        "top5": results_container.get("top5", []),
-        "yes_list": results_container.get("yes_list", []),
-        "no_list": results_container.get("no_list", []),
-        "person_info": results_container.get("person_info", {})
-    }), 200
+    # Return a streaming response (SSE) instead of a single JSON
+    return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    app.run(port=3001, debug=False)
+    app.run(port=3001, debug=False, threaded = True)
