@@ -15,9 +15,11 @@ from typing import Optional, Dict, List, Tuple
 
 lm_dir = osp.join(osp.abspath(osp.join(osp.dirname(__file__), '..')), "language_models")
 sys.path.append(lm_dir)
-from lm_client import GeminiClient
+from lm_client import OllamaClient
 
-lm_client = GeminiClient(api_key="AIzaSyBGmTP8OCrfNXydpQjZxI_OL2VX9XC_VfY")
+
+lm_client = OllamaClient()
+
 
 def filter_links_worker(signature_data,
                 results: List[ResultEntry],
@@ -116,14 +118,12 @@ def upload_photo():
         web_content: Dict[str, str] = {}
         
         # 2) Building signature
-        # yield "event: progress\n"
-        # yield "data: 🪪 Building profile signatures\n\n"
+        yield "event: progress\n"
+        yield "data: 🪪 Building profile signatures\n\n"
         search_results.sort(key=lambda x: x[0], reverse=True)
         top5 = [x[1] for x in search_results[:5]]
         remaining_results = search_results[5:]
         signature_data = build_signature_from_top5(top5, cache=web_content)
-        yield "event: progress\n"
-        yield "data: 🪪 Building profile signatures\n\n"
         
         # 3) Filtering additional links
         yield "event: progress\n"

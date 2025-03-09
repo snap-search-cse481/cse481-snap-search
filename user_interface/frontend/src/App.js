@@ -274,7 +274,7 @@ handleCapture = () => {
             } else if (event_type === 'result') {
               this.handleResultSSE(data);
             } else if (event_type === 'error') {
-              // this.handleErrorSSE(data);
+              this.handleErrorSSE(data);
             }
           }
         }
