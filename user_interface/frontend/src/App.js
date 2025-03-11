@@ -292,7 +292,13 @@ handleCapture = () => {
   // Handle the final result from the server
   handleResultSSE = (data) => {
     console.log(data);
-    let parsedData = JSON.parse(data);
+    let parsedData;
+    try {
+      parsedData = JSON.parse(data);
+    } catch (error) {
+      this.handleProgressSSE(data);
+      return;
+    }
     this.resultsContainerRef.current.innerHTML = `
       <p>🎉 Results:</p>
       <p>👤 Name: ${parsedData.name}</p>
