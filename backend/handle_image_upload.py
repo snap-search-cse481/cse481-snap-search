@@ -39,7 +39,7 @@ def filter_links_worker(signature_data,
 def filter_links(signature_data,
                  src_results: List[ResultEntry],
                  cache: Optional[Dict[str, str]] = None,
-                 limit: int = 10) -> List[ResultEntry]:
+                 limit: int = 3) -> List[ResultEntry]:
     yes_list: List[Tuple[int, str]] = []
 
     if limit < len(src_results):
@@ -108,11 +108,14 @@ def upload_photo():
         # 1) Searching by face
         yield "event: progress\n"
         yield "data: 😄 Running face search\n\n"
-        error_msg, search_results = search_by_face(file_path, bypass=True)
+        bypass = True
+        error_msg, search_results = search_by_face(file_path, bypass=bypass)
         if search_results is None:
             yield "event: error\n"
             yield f"data: Face lookup error\n\"{error_msg}\"\n\n"
             return
+        if bypass:
+            time.sleep(0.5)
         
         # Web text cache
         web_content: Dict[str, str] = {}
@@ -137,8 +140,8 @@ def upload_photo():
         ##### Make calls to LLM #####
         # Prepare the query
         yes_list.extend(search_results[:5])
-        query = '.'.join([f"\nSOURCE:\n {web_content[url]}" for _, url in yes_list])
-        
+        query = '.'.join([f"\nSOURCE:\n {web_content.get(url,"")}" for _, url in yes_list])
+
         print("🤖 Querying LLM...\n")
 
         # Retry up to 3 times
@@ -166,7 +169,6 @@ def upload_photo():
         print(f"Profession: {person_info.get('profession', '')}")
         print(f"Workplace: {person_info.get('workplace', '')}")
         print(f"Email: {person_info.get('email', '')}")
-        print(f"Phone: {person_info.get('phone', '')}")
         print("Fun Facts:")
         print("\n".join([f"- {fact}" for fact in person_info.get('fun_facts', [])]))
         

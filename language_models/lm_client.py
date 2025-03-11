@@ -13,7 +13,7 @@ class OllamaClient:
 
     def __init__(self,
                  hosts: List[str] = default_servers,
-                 model: str = 'qwen2.5:1.5b',
+                 model: str = 'qwen2.5:3b',
                  system_prompt: Optional[str] = None,
                  custom_name: Optional[str] = None):
         for host in hosts:
@@ -92,8 +92,7 @@ class OllamaClient:
         - name: Full name
         - profession: Current job or profession
         - workplace: Current workplace or affiliation
-        - email: Email address if available
-        - phone: Phone number if available
+        - email: Email address of person (only show emails explicitly stated in the provided text. Do not make up any email addresses or combine to make one based on your own conclusion). If multiple specifically found, list all found emails
         - fun_facts: A list of 3-5 interesting facts strictly about the person
         
         If any field is not available in the text, leave it blank or empty list for fun_facts.
@@ -139,7 +138,6 @@ class OllamaClient:
                 "profession": "",
                 "workplace": "",
                 "email": "",
-                "phone": "",
                 "fun_facts": ["Information extraction failed"],
                 "raw_response": response_text
             }
@@ -158,7 +156,6 @@ if __name__ == '__main__':
         print(f"Profession: {result.get('profession', '')}")
         print(f"Workplace: {result.get('workplace', '')}")
         print(f"Email: {result.get('email', '')}")
-        print(f"Phone: {result.get('phone', '')}")
         print(f"Fun Facts:")
         for fact in result.get('fun_facts', []):
             print(f"- {fact}")
