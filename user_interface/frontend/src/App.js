@@ -271,10 +271,8 @@ handleCapture = () => {
             console.log('SSE Data:', data);
             if (event_type === 'progress') {
               this.handleProgressSSE(data);
-            } else if (event_type === 'result') {
+            } else {
               this.handleResultSSE(data);
-            } else if (event_type === 'error') {
-              this.handleErrorSSE(data);
             }
           }
         }
@@ -283,7 +281,6 @@ handleCapture = () => {
   
     } catch (error) {
       console.error('Error receiving SSE:', error);
-      alert('Upload or SSE reception failed.');
     }
   };
 
@@ -301,7 +298,6 @@ handleCapture = () => {
       <p>👤 Name: ${parsedData.name}</p>
       <p>💼 Profession: ${parsedData.profession}</p>
       <p>🏢 Workplace: ${parsedData.workplace}</p>
-      <p>📞 Phone: ${parsedData.phone}</p>
       <p>📧 Email: ${parsedData.email}</p>
     `;
     if (Object.hasOwn(parsedData, 'fun_facts')) {
@@ -312,7 +308,7 @@ handleCapture = () => {
 
   // Handle any errors from the server
   handleErrorSSE = (error) => {
-    this.resultsContainerRef.current.innerHTML = `<p>⚠️ An error occured: ${error}</p>`;
+    // this.resultsContainerRef.current.innerHTML = `<p>⚠️ An error occured: ${error}</p>`;
   };
 
   render() {
