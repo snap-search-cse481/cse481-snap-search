@@ -294,16 +294,20 @@ handleCapture = () => {
     console.log(data);
     let parsedData = JSON.parse(data);
     this.resultsContainerRef.current.innerHTML = `
-      <p>🎉 Results:</p>
-      <p>👤 Name: ${parsedData.name}</p>
-      <p>💼 Profession: ${parsedData.profession}</p>
-      <p>🏢 Workplace: ${parsedData.workplace}</p>
-      <p>📧 Email: ${parsedData.email}</p>
+    <div class="output-container">
+      <p><strong>👤 Name:</strong> ${parsedData.name}</p>
+      <p><strong>💼 Profession:</strong> ${parsedData.profession}</p>
+      <p><strong>🏢 Workplace:</strong> ${parsedData.workplace}</p>
+      <p><strong>📧 Email:</strong> ${parsedData.email}</p>
     `;
     if (Object.hasOwn(parsedData, 'fun_facts')) {
-      this.resultsContainerRef.current.innerHTML += `<p>🎉 Fun Facts: ${parsedData.fun_facts}</p>`;
+      this.resultsContainerRef.current.innerHTML += `<p><strong>🎉 Fun Facts: </strong></p><ul>`;
+      for (let fact of parsedData.fun_facts) {
+        this.resultsContainerRef.current.innerHTML += `<li>${fact}</li>`;
+      }
+      this.resultsContainerRef.current.innerHTML += `</ul>`;
     }
-
+    this.resultsContainerRef.current.innerHTML += `</div>`;
   };
 
   // Handle any errors from the server
