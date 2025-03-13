@@ -66,7 +66,7 @@ def tokenize(text):
     text = re.sub(r'[^a-z\s]', '', text)
     return text.split()
 
-def build_signature_from_top5(top5_urls, cache: Optional[Dict[str, str]] = None):
+def build_signature_from_topX(topX_urls, cache: Optional[Dict[str, str]] = None):
     """
     1. Fetch + tokenize text from each top-5 URL.
     2. Aggregate and find top frequent words.
@@ -77,7 +77,7 @@ def build_signature_from_top5(top5_urls, cache: Optional[Dict[str, str]] = None)
     additional_ignore = {"com", "www", "http", "https", "org", "bsky", "app", "profile"}
     common_stopwords.update(additional_ignore)
 
-    for url in tqdm(top5_urls, desc="🏗️ Building signature"):
+    for url in tqdm(topX_urls, desc="🏗️ Building signature"):
         page_text = get_page_text(url)
         if page_text:
             words = tokenize(page_text)
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     top5 = [x[1] for x in links_with_scores[:5]]
     the_rest = [x[1] for x in links_with_scores[5:]]
 
-    signature = build_signature_from_top5(top5)
+    signature = build_signature_from_topX(top5)
     yes_list, no_list = [], []
 
     for url in the_rest:

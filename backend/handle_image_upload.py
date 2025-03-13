@@ -10,8 +10,10 @@ import time
 import json
 
 from facecheck_api import search_by_face, ResultEntry
-from sentence_embedding import build_signature_from_top5, compute_signature_overlap, get_page_text
+from sentence_embedding import build_signature_from_topX, compute_signature_overlap, get_page_text
+from name_finder import SupplementSource
 from typing import Optional, Dict, List, Tuple
+from statistics import mean, stdev
 
 lm_dir = osp.join(osp.abspath(osp.join(osp.dirname(__file__), '..')), "language_models")
 sys.path.append(lm_dir)
@@ -41,6 +43,9 @@ def filter_links(signature_data,
                  cache: Optional[Dict[str, str]] = None,
                  limit: int = 3) -> List[ResultEntry]:
     yes_list: List[Tuple[int, str]] = []
+
+    if len(src_results) == 0:
+        return yes_list
 
     if limit < len(src_results):
         src_results = src_results[:limit]
@@ -124,23 +129,49 @@ def upload_photo():
         yield "event: progress\n"
         yield "data: 🪪 Building profile signatures\n\n"
         search_results.sort(key=lambda x: x[0], reverse=True)
-        top5 = [x[1] for x in search_results[:5]]
-        remaining_results = search_results[5:]
-        signature_data = build_signature_from_top5(top5, cache=web_content)
+
+        # Filter to keep only the top cluster of results based on score
+        if search_results:
+            scores = [res[0] for res in search_results]
+            avg_score = mean(scores)
+            score_stdev = stdev(scores)
+            threshold_index = len(search_results)
+            for i, res in enumerate(search_results):
+                if res[0] < avg_score + score_stdev:
+                    threshold_index = i
+                    break
+            search_results = search_results[:threshold_index]
         
+        top_res_count = min(5, len(search_results))
+        topX = [x[1] for x in search_results[:top_res_count]]
+        remaining_results = search_results[top_res_count:]
+        signature_data = build_signature_from_topX(topX, cache=web_content)
+
         # 3) Filtering additional links
         yield "event: progress\n"
         yield "data: 🔍 Finding & filtering additional information\n\n"
         yes_list = filter_links(signature_data, remaining_results, cache=web_content)
         
+        supplement_txt = ""
+        # If we lack results, try to find a LinkedIn or GitHub profile
+        if len(yes_list) < 2:
+            src = SupplementSource(topX)
+            supplement_txt, supplement_sources = src.get()
+            if len(supplement_sources) > 3:
+                supplement_sources = supplement_sources[:3]
+            for source in supplement_sources:
+                web_content[source] = get_page_text(source)
+            yes_list.extend([(0, src) for src in supplement_sources])
+
         # 4) Querying LLM
         yield "event: progress\n"
         yield "data: 📝 Summarizing person information\n\n"
 
         ##### Make calls to LLM #####
         # Prepare the query
-        yes_list.extend(search_results[:5])
+        yes_list.extend(search_results[:top_res_count])
         query = '.'.join([f"\nSOURCE:\n {web_content.get(url,"")}" for _, url in yes_list])
+        query += supplement_txt
 
         print("🤖 Querying LLM...\n")
 
