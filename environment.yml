@@ -16,3 +16,5 @@ dependencies:
   - ollama-python
   - beautifulsoup4
   - dspy-ai
+  - pip:
+    - duckduckgo_search

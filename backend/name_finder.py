@@ -3,9 +3,17 @@ from urllib.parse import urlparse
 from duckduckgo_search import DDGS
 import time
 
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Optional
 
-def get_github_data(github_url) -> Dict[str, str | int]:
+def get_github_data(github_url) -> Optional[Dict[str, str | int]]:
+    """Query the GitHub API to fetch user details
+
+    Args:
+        github_url (_type_): _description_
+
+    Returns:
+        Dict[str, str | int]: _description_
+    """
     # Parse the URL to extract the username
     path = urlparse(github_url).path
     username = path.strip("/").split("/")[0]
@@ -20,9 +28,17 @@ def get_github_data(github_url) -> Dict[str, str | int]:
     else:
         return None
 
-def fetch_github_readme(response: Dict[str, str | int]) -> str:
+def fetch_github_readme(gh_response: Dict[str, str | int]) -> str:
+    """Attempts to fetch the README.md file from the user's GitHub repository
+
+    Args:
+        gh_response (Dict[str, str  |  int]): User details resposne fetched from the GitHub API
+
+    Returns:
+        str: Content of the user's README.md file or an empty string
+    """
     # Fetch the README.md file from the user's GitHub repository
-    url = f"https://raw.githubusercontent.com/{response["login"]}/{response["login"]}/refs/heads/main/README.md"
+    url = f"https://raw.githubusercontent.com/{gh_response["login"]}/{gh_response["login"]}/refs/heads/main/README.md"
     response = requests.get(url)
     if response.status_code == 200:
         return response.text
@@ -30,6 +46,14 @@ def fetch_github_readme(response: Dict[str, str | int]) -> str:
 
 
 def get_linkedin_name(linkedin_url: str) -> Tuple[str, str]:
+    """Uses DuckDuckGo to fetch the name from the LinkedIn URL
+
+    Args:
+        linkedin_url (str): _description_
+
+    Returns:
+        Tuple[str, str]: _description_
+    """
     # Use DuckDuckGo to fetch the name from the LinkedIn URL
     if linkedin_url[-1] == "/":
         linkedin_url = linkedin_url[:-1]
@@ -60,6 +84,8 @@ def fetch_pages_from_name(name: str, place: str, debug: bool=False)-> List[str]:
     return [r["href"] for r in res if "linkedin.com/in" not in r["href"] and (name.lower() in r["body"].lower() or name.lower() in r["title"].lower())]
 
 class SupplementSource:
+    # A class to fetch additional information from LinkedIn and GitHub
+    # In hindsight this isn't the best design, but it works for now
     def __init__(self, urls: List[str]):
         self.linkedin = None
         self.github = None
@@ -67,6 +93,7 @@ class SupplementSource:
         self.li_place = ""
         self.gh_data = None
 
+        # Parse the list of top URLs to extract LinkedIn and GitHub URLs
         for url in urls:
             if self.linkedin is None and "linkedin.com/in" in url:
                 self.linkedin = url
@@ -83,8 +110,10 @@ class SupplementSource:
             self.gh_data = get_github_data(self.github)
     
     def get(self)-> Tuple[str, List[str]]:
+        # Fetch additional information from LinkedIn and GitHub
         supplement_text = []
         urls = []
+        # Not a good design, but it works for now
         try:
             if self.gh_data is not None:
                 gh_name = self.gh_data.get("name", "")
@@ -115,8 +144,7 @@ class SupplementSource:
 
 
 if __name__ == "__main__":
-    # github_url = "https://github.com/rudra-singh1"
-    github_url = "https://github.com/yanful"
+    github_url = "https://github.com/rudra-singh1"
     user_data = get_github_data(github_url)
     print(user_data)
     print(user_data.get("name", "Name not available"))

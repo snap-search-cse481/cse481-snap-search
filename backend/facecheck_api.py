@@ -13,6 +13,16 @@ APITOKEN = 'Vc+ae8M5ibx+Sad2eWwBvRxfozjmM3US3seDlTztpdJTTNpKAkSy8AupuS2fXUKFGV02
 ResultEntry = Tuple[int, str]
 
 def search_by_face(image_file, debug=False, bypass=False) -> Tuple[Optional[str], Optional[List[ResultEntry]]]:
+    """Search for a face in an image using the FaceCheck API
+
+    Args:
+        image_file (str): Path to image file to search.
+        debug (bool, optional): Toggles debug logging. Defaults to False.
+        bypass (bool, optional): Toggles bypass mode for us load previously saved results from a CSV file instead of searching. Defaults to False.
+
+    Returns:
+        Tuple[Optional[str], Optional[List[ResultEntry]]]: Tuple of error message and list of tuples containing the score and URL of the images found
+    """
     # Allow us to bypass facecheck for testing purposes
     if bypass:
         print("****** BYPASSING FACECHECK with local file ******")
@@ -95,6 +105,11 @@ def search_by_face(image_file, debug=False, bypass=False) -> Tuple[Optional[str]
             time.sleep(1)
 
 def print_result(urls_images):
+    """Debug print the results of a face search
+
+    Args:
+        urls_images (List): List of tuples containing face search result in (score, URL) pair
+    """
     print(f'DEBUG: Found {len(urls_images)} images')
 
     if urls_images:

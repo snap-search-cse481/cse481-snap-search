@@ -27,6 +27,14 @@ def filter_links_worker(signature_data,
                 results: List[ResultEntry],
                 output: List[ResultEntry],
                 cache:Optional[Dict[str, str]] = None):
+    """Worker function to filter links based on signature overlap
+
+    Args:
+        signature_data: Signature data built from top X urls
+        results (List[ResultEntry]): List of search results assigned to this worker
+        output (List[ResultEntry]): List to store filtered results
+        cache (Optional[Dict[str, str]], optional): Web page content cache. Defaults to None.
+    """
     # Filter the rest of the links
     for res in results:
         url = res[1]
@@ -42,6 +50,14 @@ def filter_links(signature_data,
                  src_results: List[ResultEntry],
                  cache: Optional[Dict[str, str]] = None,
                  limit: int = 3) -> List[ResultEntry]:
+    """Filter links based on signature overlap
+
+    Args:
+        signature_data: Signature data built from top X urls
+        src_results (List[ResultEntry]): List of search results
+        cache (Optional[Dict[str, str]], optional): Web page content cache. Defaults to None.
+        limit (int, optional): Maximum number of links to return. Defaults to 3.
+    """
     yes_list: List[Tuple[int, str]] = []
 
     if len(src_results) == 0:
@@ -84,8 +100,11 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'uploa
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# Define a route for the server
 @app.route('/uploadphoto', methods=['POST'])
 def upload_photo():
+    """Handles the image upload and processing
+    """
     start = time.time()
     # Check if the request contains the file part
     if 'image' not in request.files:
@@ -113,7 +132,7 @@ def upload_photo():
         # 1) Searching by face
         yield "event: progress\n"
         yield "data: 😄 Running face search\n\n"
-        bypass = True
+        bypass = False
         error_msg, search_results = search_by_face(file_path, bypass=bypass)
         if search_results is None:
             yield "event: error\n"

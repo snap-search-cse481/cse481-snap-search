@@ -183,28 +183,6 @@ handleCapture = () => {
   }
 };
 
-  // handleSubmit = () => {
-  //   const handleUpload = async () => {
-
-  //       const formData = new FormData();
-  //       formData.append('image', this.state.file);  // Ensure key matches backend
-
-  //       try {
-  //           const response = await axios.post('http://localhost:3001/uploadphoto', formData, {
-  //               headers: { 'Content-Type': 'multipart/form-data' }
-  //           });
-  //           console.log('Upload success:', response.data);
-  //           alert('Image uploaded successfully!');
-  //       } catch (error) {
-  //           console.error('Error uploading image:', error);
-  //           alert('Upload failed.');
-  //       }
-  //   };
-
-  //   handleUpload();
-  //   this.submitButton.current.style.display = 'none';
-  //   this.loadingGif();
-  // };
 
   handleSubmit = async () => {
     // Prepare form data
