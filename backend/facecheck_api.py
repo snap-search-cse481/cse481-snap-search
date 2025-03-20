@@ -7,8 +7,8 @@ from tqdm import tqdm
 import csv
 from typing import Optional, List, Tuple
 
-TESTING_MODE = True
-APITOKEN = 'Vc+ae8M5ibx+Sad2eWwBvRxfozjmM3US3seDlTztpdJTTNpKAkSy8AupuS2fXUKFGV02rwI2r9s=' # Your API Token
+TESTING_MODE = False
+APITOKEN = '' # Your API Token from facecheck.id
 
 ResultEntry = Tuple[int, str]
 

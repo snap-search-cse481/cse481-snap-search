@@ -9,7 +9,7 @@ class OllamaClient:
     dummy_prompt: str = "You are a helpful assistant."
     filter_summarize_prompt: str = "You are an assistant specialized in extracting and summarizing factual information from provided text excerpts. Your task is to read the given excerpts from various websites and determine which individual is mentioned most frequently, assuming this is the person of interest. Then, using only the information provided in the texts, provide a concise, factual summary about this person. If some sources do not contain relevant details, simply ignore them and focus on those that do. It is critical that you strictly adhere to the provided excerpts, avoid making up any details, and clearly indicate any ambiguities if present. Focus on the basics of a person profile, like the persons's name, job, etc. Keep your summary concise and under 100 words."
 
-    default_servers: List[str] = ['http://fruit.alexluo.com:11435', 'http://fruit.alexluo.com:11434']
+    default_servers: List[str] = ['']   # Add your Ollama server URLs & port here
 
     def __init__(self,
                  hosts: List[str] = default_servers,

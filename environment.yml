@@ -1,4 +1,4 @@
-name: 481_repo
+name: cse481_snapsearch
 channels:
   - defaults
   - conda-forge
