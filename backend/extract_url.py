@@ -1,3 +1,8 @@
+# Utility script for caching facecheck results to a CSV file
+# so we don't have to re-run the facecheck API every time.
+# Modified from:
+# https://github.com/quantumthe0ry/Facecheck.id-Extractor
+
 import requests
 import base64
 import json
@@ -64,7 +69,9 @@ def extract_facecheck_url(id_search: str) -> List[Tuple[int,str]]:
         return []
 
 if __name__ == "__main__":
-    res = extract_facecheck_url('KWKVX8yBPb0')
+    # Add your search_ID here (part of the facecheck search result URL)
+    # See https://github.com/quantumthe0ry/Facecheck.id-Extractor/tree/main
+    res = extract_facecheck_url('')
     print(res)
 
     output_path = osp.dirname(osp.realpath(__file__))
