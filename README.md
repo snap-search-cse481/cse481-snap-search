@@ -67,7 +67,7 @@ Activate the above conda environment. Then run the flask backend with
 
 **Rudra:** Link Sorting, Extract URL, DSPy integration for LLM, Gemini Model Testing, Testing, Documentation/PPTs
 
-**Angie:** Frontend development, Testing, Evaluation, Documentation/PPTs
+**Angie:** Frontend development, Testing, Evaluation, Documentation/PPT
 
 ### Open source component
 - [Facecheck.id-Extractor](https://github.com/quantumthe0ry/Facecheck.id-Extractor) (MIT License)
