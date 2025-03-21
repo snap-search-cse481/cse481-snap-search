@@ -1,6 +1,6 @@
 <div align="center">
   <h1>📸 SnapSearch</h1>
-  <h3>CSE 481 Wi 2025 Capstone Project at University of Washington</h3>
+  <h3>CSE 481 Wi 2025 Capstone Project at University of Washington (Prof Gollakota)</h3>
   <p>Contributors: Alex Luo, Rudra Prakash Singh, Angie Suwitono</p>
 </div>
 
